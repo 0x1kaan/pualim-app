@@ -311,6 +311,13 @@ export interface Database {
         }
       }
     }
+    Views: {
+      [_ in never]: {
+        Row: Record<string, unknown>
+        Insert: Record<string, unknown>
+        Update: Record<string, unknown>
+      }
+    }
     Functions: {
       get_cafe_analytics: {
         Args: { p_cafe_id: string; p_days?: number }
@@ -323,6 +330,14 @@ export interface Database {
       expire_old_rewards: {
         Args: Record<string, never>
         Returns: void
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: {
+        [_ in never]: never
       }
     }
   }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Menu, X, Coffee } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
@@ -52,12 +52,12 @@ export function Navbar() {
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">Giriş Yap</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/register">Ücretsiz Başla</Link>
-            </Button>
+            <Link href="/login" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+              Giriş Yap
+            </Link>
+            <Link href="/register" className={buttonVariants({ size: 'sm' })}>
+              Ücretsiz Başla
+            </Link>
           </div>
 
           <button
@@ -84,12 +84,12 @@ export function Navbar() {
               </Link>
             ))}
             <div className="pt-3 space-y-2 border-t border-border">
-              <Button variant="outline" size="sm" className="w-full" asChild>
-                <Link href="/login">Giriş Yap</Link>
-              </Button>
-              <Button size="sm" className="w-full" asChild>
-                <Link href="/register">Ücretsiz Başla</Link>
-              </Button>
+              <Link href="/login" className={buttonVariants({ variant: 'outline', size: 'sm', className: 'w-full' })}>
+                Giriş Yap
+              </Link>
+              <Link href="/register" className={buttonVariants({ size: 'sm', className: 'w-full' })}>
+                Ücretsiz Başla
+              </Link>
             </div>
           </div>
         </div>

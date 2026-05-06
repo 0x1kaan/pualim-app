@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight, Star, Smartphone, QrCode } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
 const STATS = [
@@ -45,17 +45,13 @@ export function Hero() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-12">
-            <Button size="lg" className="text-base px-8" asChild>
-              <Link href="/register">
-                Ücretsiz Başla
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="text-base" asChild>
-              <Link href="#nasil-calisir">
-                Nasıl Çalışır?
-              </Link>
-            </Button>
+            <Link href="/register" className={buttonVariants({ size: 'lg', className: 'text-base px-8' })}>
+              Ücretsiz Başla
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+            <Link href="#nasil-calisir" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'text-base' })}>
+              Nasıl Çalışır?
+            </Link>
           </div>
 
           {/* Stats */}

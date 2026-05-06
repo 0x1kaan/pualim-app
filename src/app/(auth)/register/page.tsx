@@ -78,9 +78,12 @@ export default function RegisterPage() {
             <strong>{email}</strong> adresine doğrulama linki gönderdik.
             Linke tıklayarak hesabınızı aktive edin.
           </p>
-          <Button variant="outline" asChild>
-            <Link href="/login">Giriş Yap</Link>
-          </Button>
+          <Link
+            href="/login"
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition hover:bg-muted"
+          >
+            Giriş Yap
+          </Link>
         </CardContent>
       </Card>
     )

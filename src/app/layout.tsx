@@ -24,6 +24,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://pualim.today'),
+  manifest: '/manifest.json',
   title: {
     default: 'Pualım — Kafeler için Dijital Sadakat Kartı',
     template: '%s | Pualım',
