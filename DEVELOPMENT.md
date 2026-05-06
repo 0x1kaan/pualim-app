@@ -33,7 +33,7 @@ C:\Users\Yigit Kaan\OneDrive\Desktop\Pualim\pualim-app\
 
 | Katman | Teknoloji | Versiyon |
 |--------|-----------|----------|
-| Framework | Next.js | 15 (App Router) |
+| Framework | Next.js | 16.2.4 (App Router) |
 | Dil | TypeScript | strict mode |
 | Stil | Tailwind CSS v4 + shadcn/ui | latest |
 | Animasyon | Framer Motion | latest |
@@ -136,7 +136,7 @@ src/
 ├── types/
 │   ├── database.ts                 ← TAMAMLANDI
 │   └── index.ts
-├── middleware.ts                   ← Auth guard
+├── proxy.ts                        ← Auth guard
 supabase/
 └── migrations/
     ├── 001_initial_schema.sql      ← TAMAMLANDI
@@ -267,10 +267,13 @@ Kurulan paketler:
 - [x] `src/stores/cafeStore.ts` — Zustand global state
 
 #### 2.2 Auth Sistemi
-- [x] `src/middleware.ts` — Supabase SSR auth guard
+- [x] `src/proxy.ts` — Supabase SSR auth guard
 - [x] `src/app/(auth)/layout.tsx`
 - [x] `src/app/(auth)/login/page.tsx`
 - [x] `src/app/(auth)/register/page.tsx`
+- [x] `src/app/(auth)/forgot-password/page.tsx`
+- [x] `src/app/(auth)/reset-password/page.tsx`
+- [x] `src/app/auth/callback/route.ts`
 
 #### 2.3 Root Layout & Providers
 - [x] `src/app/layout.tsx` — Google Fonts, Sonner, Providers
@@ -344,6 +347,39 @@ Supabase JS v2 + TypeScript strict mode + Next.js 16 uyumsuzlukları giderildi:
 
 ---
 
+### Oturum 3 — Kalite Kontrol + Hukuki Sayfalar (2026-05-06)
+
+- [x] `npm run lint` hataları giderildi: React purity uyarıları, kullanılmayan importlar ve JSX apostrof kaçışı düzeltildi.
+- [x] `src/middleware.ts` → `src/proxy.ts` geçişi yapıldı; Next.js 16 deprecation uyarısı kapandı.
+- [x] Müşteri kartında localStorage oturum yükleme akışı lint uyumlu hale getirildi.
+- [x] Footer ve kayıt ekranındaki yasal linkler için rotalar eklendi: `/gizlilik`, `/kvkk`, `/kosullar`, `/cerez`.
+- [x] Ortak `LegalPage` ve `legal-content` modeli eklendi; hukuki metinler bakım yapılabilir hale getirildi.
+- [x] Supabase e-posta doğrulama ve şifre kurtarma dönüşleri için `/auth/callback` route handler eklendi.
+- [x] Şifremi unuttum ve yeni şifre oluşturma akışları eklendi: `/forgot-password`, `/reset-password`.
+- [x] Kayıt e-posta dönüşü `/auth/callback?next=/onboarding` üzerinden güvenli oturum değişimine bağlandı.
+- [x] Sitemap yeni yasal sayfaları kapsayacak şekilde güncellendi.
+- [x] Müşteri detay modalındaki puan geçmişi skeleton yerine `/api/customers/[id]` verisine bağlandı.
+- [x] Landing page profesyonel ürün vitrini olarak yeniden çalışıldı: yeni hero, workflow, canlı panel mock'u, müşteri kartı bölümü, pricing ve final CTA.
+- [x] Auth layout iki kolonlu, görsel destekli ve landing ile tutarlı hale getirildi.
+- [x] Heading font referansı `globals.css` içinde gerçek `--font-heading` token'ına bağlandı.
+- [x] `npm run lint` ve `npm run build` başarılı.
+
+**Not:** `next.config.ts` içinde Turbopack root ayarı şu an çalışma kopyasında kaldırılmış durumda. Build başarılı, ancak makinede üst dizinde ikinci bir `package-lock.json` olduğu için Next.js root inference uyarısı veriyor.
+
+---
+
+### Oturum 4 — Dashboard Demo Modu & Frontend Polish (2026-05-06)
+
+- [x] Supabase env yokken dashboard rotaları login'e geri atmak yerine demo verisiyle açılır hale getirildi.
+- [x] `src/lib/demo.ts` eklendi: demo kafe, müşteriler, puan talepleri, kampanyalar, analitik trend ve segment verileri.
+- [x] Dashboard, müşteriler, kampanyalar, analitik ve ayarlar sayfaları demo modda API'ye bağımlı olmadan çalışıyor.
+- [x] Login sayfasına Supabase ayarı yokken doğrudan demo paneli açan CTA eklendi.
+- [x] Sidebar mobil Sheet içinde görünür hale getirildi; demo modda logout Supabase client oluşturmadan login'e dönüyor.
+- [x] Analitik grafiği SSR uyarısı vermemesi için client-only render ediliyor.
+- [x] `npm run lint` ve `npm run build` başarılı; `/login`, `/dashboard`, `/customers`, `/campaigns`, `/analytics`, `/settings` localhost'ta 200 dönüyor.
+
+---
+
 ## 🔲 KALAN ADIMLAR
 
 ### Supabase Kurulumu (Henüz Yapılmadı)
@@ -398,7 +434,7 @@ Kayıp:   90 günden fazla gelmedi
 ## Bilinen Sorunlar / Notlar
 
 - `globals.css` tema renkleri (kahve/yeşil/krem) kullanıcı/linter tarafından güncellendi. Bu temayı koru.
-- `next.config.ts` turbopack konfigürasyonu eklendi.
+- `next.config.ts` Turbopack root ayarı kaldırılmış durumda; build geçiyor ancak workspace root uyarısı veriyor. İstenirse `turbopack.root` geri eklenerek temizlenebilir.
 - shadcn/ui v4 Tailwind ile uyumlu (shadcn/tailwind.css import ile).
 - `@radix-ui/react-badge` paketi npm'de yok, shadcn badge bileşeni kullanılıyor.
 
@@ -411,6 +447,8 @@ Kayıp:   90 günden fazla gelmedi
 | 2026-05-05 | Proje kurulumu, DB schema, temel lib dosyaları | Claude (Hızır) |
 | 2026-05-05 | Tüm uygulama tamamlandı: landing page, kart sayfası, tüm API routes, dashboard | Claude (Hızır) |
 | 2026-05-05 | TypeScript build fix: Zod v4, Base UI asChild, Supabase any cast, campaign.partial() | Claude (Hızır) |
+| 2026-05-06 | Lint/build kalite düzeltmeleri, Next 16 proxy geçişi, yasal sayfalar, şifre sıfırlama akışı, landing/auth frontend polish | Codex |
+| 2026-05-06 | Supabase env olmadan çalışan dashboard demo modu, dashboard frontend polish, mobil sidebar düzeltmesi | Codex |
 
 ---
 

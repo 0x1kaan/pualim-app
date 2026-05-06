@@ -52,7 +52,7 @@ export function Features() {
               İhtiyacınız olan her şey
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Pualım'ı birkaç dakikada kurun. Kafe sadakati için ihtiyacınız olan tüm araçlar tek platformda.
+              Pualım&apos;ı birkaç dakikada kurun. Kafe sadakati için ihtiyacınız olan tüm araçlar tek platformda.
             </p>
           </motion.div>
         </div>

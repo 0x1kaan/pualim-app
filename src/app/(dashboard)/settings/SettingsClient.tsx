@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Save,
@@ -13,10 +13,14 @@ import {
   Palette,
   Bell,
   Store,
+  Download,
+  Printer,
 } from 'lucide-react'
+import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -27,6 +31,7 @@ import type { Cafe } from '@/types/database'
 
 interface Props {
   cafe: Cafe
+  demoMode?: boolean
 }
 
 interface FormState {
@@ -43,10 +48,12 @@ interface FormState {
   sms_enabled: boolean
 }
 
-export function SettingsClient({ cafe }: Props) {
+export function SettingsClient({ cafe, demoMode = false }: Props) {
+  const setCafe = useCafeStore((s) => s.setCafe)
   const updateCafe = useCafeStore((s) => s.updateCafe)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
+  const qrCanvasRef = useRef<HTMLDivElement>(null)
   const [form, setForm] = useState<FormState>({
     name: cafe.name,
     description: cafe.description ?? '',
@@ -66,6 +73,10 @@ export function SettingsClient({ cafe }: Props) {
       ? `${window.location.origin}/card/${cafe.slug}`
       : `/card/${cafe.slug}`
 
+  useEffect(() => {
+    setCafe(cafe)
+  }, [cafe, setCafe])
+
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
@@ -82,6 +93,22 @@ export function SettingsClient({ cafe }: Props) {
     }
 
     setSaving(true)
+
+    if (demoMode) {
+      updateCafe({
+        ...form,
+        description: form.description || null,
+        address: form.address || null,
+        phone: form.phone || null,
+        instagram: form.instagram || null,
+        reward_description: form.reward_description || null,
+        updated_at: new Date().toISOString(),
+      })
+      toast.success('Demo ayarlar güncellendi')
+      setSaving(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/cafe', {
         method: 'PATCH',
@@ -125,10 +152,46 @@ export function SettingsClient({ cafe }: Props) {
     }
   }
 
+  function handleDownloadQR() {
+    const canvas = qrCanvasRef.current?.querySelector('canvas')
+    if (!canvas) return
+    const url = (canvas as HTMLCanvasElement).toDataURL('image/png')
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `pualim-${cafe.slug}.png`
+    a.click()
+  }
+
+  function handlePrintQR() {
+    const canvas = qrCanvasRef.current?.querySelector('canvas')
+    if (!canvas) return
+    const url = (canvas as HTMLCanvasElement).toDataURL('image/png')
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(`
+      <html><head><title>QR Kod - ${cafe.name}</title><style>
+        body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;gap:12px}
+        img{width:280px;height:280px}p{font-size:14px;color:#555}strong{font-size:18px;display:block;margin-bottom:4px}
+        @media print{button{display:none}}
+      </style></head>
+      <body>
+        <strong>${cafe.name}</strong>
+        <p>Sadakat kartınız için QR kodu okutun</p>
+        <img src="${url}" alt="QR Kod" />
+        <p style="font-size:12px;word-break:break-all">${cafeUrl}</p>
+        <button onclick="window.print()" style="margin-top:16px;padding:8px 20px;cursor:pointer">Yazdır</button>
+      </body></html>
+    `)
+    win.document.close()
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-heading font-bold">Ayarlar</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-heading font-bold">Ayarlar</h1>
+          {demoMode && <Badge variant="outline">Demo veri</Badge>}
+        </div>
         <p className="text-muted-foreground text-sm">
           Kafe bilgileri, ödül kuralları ve bildirim tercihleri
         </p>
@@ -320,35 +383,81 @@ export function SettingsClient({ cafe }: Props) {
             QR Kodu & Bağlantı
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Bu bağlantıyı QR kod olarak masalarınıza yapıştırın. Müşterileriniz
-            tarayarak puan kazanabilir.
+            Bu QR kodu masalarınıza yapıştırın. Müşterileriniz tarayarak puan kazanabilir — uygulama indirmelerine gerek yok.
           </p>
-          <div className="flex items-center gap-2">
-            <Input value={cafeUrl} readOnly className="font-mono text-xs" />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={handleCopy}
-              aria-label="Bağlantıyı kopyala"
+
+          {/* QR code display */}
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl p-4 shadow-sm border border-border shrink-0"
             >
-              {copied ? (
-                <Check className="h-4 w-4 text-green-500" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-            </Button>
+              <QRCodeSVG
+                value={cafeUrl}
+                size={160}
+                level="M"
+                includeMargin={false}
+              />
+            </motion.div>
+
+            <div className="flex-1 space-y-3 w-full">
+              <div className="space-y-1.5">
+                <p className="text-xs text-muted-foreground font-medium">Müşteri bağlantısı</p>
+                <div className="flex items-center gap-2">
+                  <Input value={cafeUrl} readOnly className="font-mono text-xs" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCopy}
+                    aria-label="Bağlantıyı kopyala"
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadQR}
+                  className="gap-1.5"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  PNG İndir
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrintQR}
+                  className="gap-1.5"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Yazdır
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Coffee className="h-3 w-3" />
+                Slug: <span className="font-mono">{cafe.slug}</span>
+              </div>
+            </div>
           </div>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center gap-2 text-xs text-muted-foreground"
-          >
-            <Coffee className="h-3 w-3" />
-            Slug: <span className="font-mono">{cafe.slug}</span>
-          </motion.div>
+
+          {/* Hidden canvas for download/print */}
+          <div ref={qrCanvasRef} className="hidden" aria-hidden>
+            <QRCodeCanvas value={cafeUrl} size={512} level="M" />
+          </div>
         </CardContent>
       </Card>
     </div>

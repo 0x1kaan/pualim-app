@@ -46,11 +46,25 @@ export function LoyaltyCardClient({ cafe }: { cafe: Cafe }) {
   const [requestSuccess, setRequestSuccess] = useState(false)
 
   useEffect(() => {
-    const savedToken = localStorage.getItem(TOKEN_KEY)
-    const savedCustomer = localStorage.getItem(CUSTOMER_KEY)
-    if (savedToken && savedCustomer) {
-      setToken(savedToken)
-      setCustomer(JSON.parse(savedCustomer))
+    let cancelled = false
+
+    queueMicrotask(() => {
+      if (cancelled) return
+
+      const savedToken = localStorage.getItem(TOKEN_KEY)
+      const savedCustomer = localStorage.getItem(CUSTOMER_KEY)
+      if (!savedToken || !savedCustomer) return
+
+      try {
+        setToken(savedToken)
+        setCustomer(JSON.parse(savedCustomer))
+      } catch {
+        localStorage.removeItem(CUSTOMER_KEY)
+      }
+    })
+
+    return () => {
+      cancelled = true
     }
   }, [TOKEN_KEY, CUSTOMER_KEY])
 

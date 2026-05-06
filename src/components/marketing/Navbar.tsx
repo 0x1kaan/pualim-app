@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: '#ozellikler', label: 'Özellikler' },
   { href: '#nasil-calisir', label: 'Nasıl Çalışır?' },
   { href: '#fiyatlar', label: 'Fiyatlar' },
+  { href: '#yorumlar', label: 'Yorumlar' },
   { href: '#sss', label: 'SSS' },
 ]
 

@@ -1,11 +1,28 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import {
+  demoCafe,
+  demoCustomers,
+  demoCustomerStamps,
+  isSupabaseConfigured,
+} from '@/lib/demo'
 import { CustomersClient } from './CustomersClient'
 import type { Cafe } from '@/types/database'
 
 export const metadata = { title: 'Müşteriler' }
 
 export default async function CustomersPage() {
+  if (!isSupabaseConfigured()) {
+    return (
+      <CustomersClient
+        cafe={demoCafe}
+        customers={demoCustomers}
+        demoStamps={demoCustomerStamps}
+        demoMode
+      />
+    )
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')

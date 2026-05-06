@@ -17,7 +17,7 @@ export function Header() {
           <Menu className="h-5 w-5" />
         </SheetTrigger>
         <SheetContent side="left" className="p-0 w-56">
-          <Sidebar />
+          <Sidebar mobile />
         </SheetContent>
       </Sheet>
 

@@ -136,7 +136,7 @@
     @apply font-sans scroll-smooth;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-sora), var(--font-inter), sans-serif;
+    font-family: var(--font-heading);
   }
 }
 

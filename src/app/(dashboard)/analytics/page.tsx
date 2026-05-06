@@ -1,11 +1,44 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import {
+  demoCafe,
+  demoAnalyticsTrend,
+  demoSummary,
+  demoTagCounts,
+  isSupabaseConfigured,
+} from '@/lib/demo'
 import { AnalyticsClient } from './AnalyticsClient'
 import type { Cafe } from '@/types/database'
 
 export const metadata = { title: 'Analitik' }
 
+const DAY_MS = 86_400_000
+const TREND_DAYS = 7
+
+function getTrendWindow() {
+  const now = Date.now()
+  const since = new Date(now - TREND_DAYS * DAY_MS).toISOString()
+  const days = Array.from({ length: TREND_DAYS }, (_, index) => {
+    const offset = TREND_DAYS - 1 - index
+    return new Date(now - offset * DAY_MS).toISOString().split('T')[0]
+  })
+
+  return { since, days }
+}
+
 export default async function AnalyticsPage() {
+  if (!isSupabaseConfigured()) {
+    return (
+      <AnalyticsClient
+        cafe={demoCafe}
+        summary={demoSummary}
+        trend={demoAnalyticsTrend}
+        tagCounts={demoTagCounts}
+        demoMode
+      />
+    )
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
@@ -31,7 +64,7 @@ export default async function AnalyticsPage() {
     .eq('cafe_id', cafe.id)
   const customers = (rawCustomers ?? []) as Array<{ tag: string }>
 
-  const since = new Date(Date.now() - 7 * 86400000).toISOString()
+  const { since, days } = getTrendWindow()
   const { data: rawDailyStamps } = await supabase
     .from('stamps')
     .select('approved_at')
@@ -39,12 +72,7 @@ export default async function AnalyticsPage() {
     .gte('approved_at', since)
   const dailyStamps = (rawDailyStamps ?? []) as Array<{ approved_at: string }>
 
-  const stampsByDay: Record<string, number> = {}
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000)
-    const key = d.toISOString().split('T')[0]
-    stampsByDay[key] = 0
-  }
+  const stampsByDay = Object.fromEntries(days.map((day) => [day, 0])) as Record<string, number>
   for (const s of dailyStamps) {
     const key = new Date(s.approved_at).toISOString().split('T')[0]
     if (key in stampsByDay) stampsByDay[key]++
@@ -60,6 +88,7 @@ export default async function AnalyticsPage() {
 
   return (
     <AnalyticsClient
+      cafe={cafe}
       summary={summary}
       trend={trend}
       tagCounts={tagCounts}

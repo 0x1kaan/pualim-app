@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Search, Users, Eye, Coffee, Gift, Calendar, Phone } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,14 +26,18 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { TAG_COLORS, TAG_LABELS, formatRelativeTime, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-import type { Cafe, Customer, CustomerTag } from '@/types/database'
+import { useCafeStore } from '@/stores/cafeStore'
+import type { Cafe, Customer, CustomerTag, Stamp } from '@/types/database'
 
 interface Props {
   cafe: Cafe
   customers: Customer[]
+  demoMode?: boolean
+  demoStamps?: Record<string, CustomerStamp[]>
 }
 
 type TagFilter = 'all' | CustomerTag
+type CustomerStamp = Pick<Stamp, 'id' | 'approved_at' | 'multiplier'>
 
 const TAG_FILTERS: { value: TagFilter; label: string }[] = [
   { value: 'all', label: 'Tümü' },
@@ -44,10 +48,22 @@ const TAG_FILTERS: { value: TagFilter; label: string }[] = [
   { value: 'lost', label: 'Kayıp' },
 ]
 
-export function CustomersClient({ cafe, customers }: Props) {
+export function CustomersClient({
+  cafe,
+  customers,
+  demoMode = false,
+  demoStamps = {},
+}: Props) {
+  const setCafe = useCafeStore((s) => s.setCafe)
   const [search, setSearch] = useState('')
   const [tagFilter, setTagFilter] = useState<TagFilter>('all')
   const [selected, setSelected] = useState<Customer | null>(null)
+  const [selectedStamps, setSelectedStamps] = useState<CustomerStamp[]>([])
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false)
+
+  useEffect(() => {
+    setCafe(cafe)
+  }, [cafe, setCafe])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -67,11 +83,45 @@ export function CustomersClient({ cafe, customers }: Props) {
     return acc
   }, [customers])
 
+  async function openCustomerDetail(customer: Customer) {
+    setSelected(customer)
+    setSelectedStamps([])
+    setIsHistoryLoading(true)
+
+    if (demoMode) {
+      setSelectedStamps(demoStamps[customer.id] ?? [])
+      setIsHistoryLoading(false)
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/customers/${customer.id}`)
+      if (!res.ok) return
+
+      const data = await res.json()
+      if (data.customer) setSelected(data.customer as Customer)
+      setSelectedStamps((data.stamps ?? []) as CustomerStamp[])
+    } catch {
+      setSelectedStamps([])
+    } finally {
+      setIsHistoryLoading(false)
+    }
+  }
+
+  function closeCustomerDetail() {
+    setSelected(null)
+    setSelectedStamps([])
+    setIsHistoryLoading(false)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-heading font-bold">Müşteriler</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-heading font-bold">Müşteriler</h1>
+            {demoMode && <Badge variant="outline">Demo veri</Badge>}
+          </div>
           <p className="text-muted-foreground text-sm">
             {cafe.name} · {customers.length} kayıtlı müşteri
           </p>
@@ -99,7 +149,7 @@ export function CustomersClient({ cafe, customers }: Props) {
                   type="button"
                   onClick={() => setTagFilter(t.value)}
                   className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                    'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
                     active
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'bg-transparent border-border hover:bg-muted'
@@ -173,7 +223,7 @@ export function CustomersClient({ cafe, customers }: Props) {
                         size="icon"
                         variant="ghost"
                         className="h-8 w-8"
-                        onClick={() => setSelected(c)}
+                        onClick={() => void openCustomerDetail(c)}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -189,16 +239,20 @@ export function CustomersClient({ cafe, customers }: Props) {
       <CustomerDetailDialog
         customer={selected}
         cafe={cafe}
-        onClose={() => setSelected(null)}
+        stamps={selectedStamps}
+        isHistoryLoading={isHistoryLoading}
+        onClose={closeCustomerDetail}
       />
     </div>
   )
 }
 
 function EmptyState({ hasCustomers }: { hasCustomers: boolean }) {
+  const Icon = hasCustomers ? Search : Users
+
   return (
     <div className="text-center py-16 px-4">
-      <div className="text-4xl mb-3">{hasCustomers ? '🔍' : '👥'}</div>
+      <Icon className="h-9 w-9 mx-auto mb-3 text-muted-foreground/40" />
       <h3 className="font-heading font-semibold mb-1">
         {hasCustomers ? 'Sonuç bulunamadı' : 'Henüz müşteri yok'}
       </h3>
@@ -214,10 +268,14 @@ function EmptyState({ hasCustomers }: { hasCustomers: boolean }) {
 function CustomerDetailDialog({
   customer,
   cafe,
+  stamps,
+  isHistoryLoading,
   onClose,
 }: {
   customer: Customer | null
   cafe: Cafe
+  stamps: CustomerStamp[]
+  isHistoryLoading: boolean
   onClose: () => void
 }) {
   const open = customer !== null
@@ -310,11 +368,33 @@ function CustomerDetailDialog({
               <div className="text-xs text-muted-foreground mb-2">
                 Puan geçmişi
               </div>
-              <div className="space-y-2">
-                <Skeleton className="h-9 w-full" />
-                <Skeleton className="h-9 w-full" />
-                <Skeleton className="h-9 w-3/4" />
-              </div>
+              {isHistoryLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-9 w-full" />
+                  <Skeleton className="h-9 w-full" />
+                  <Skeleton className="h-9 w-3/4" />
+                </div>
+              ) : stamps.length === 0 ? (
+                <p className="rounded-lg bg-muted/40 px-3 py-4 text-sm text-muted-foreground">
+                  Henüz puan geçmişi yok.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {stamps.map((stamp) => (
+                    <div
+                      key={stamp.id}
+                      className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2 text-sm"
+                    >
+                      <span className="text-muted-foreground">
+                        {formatDate(stamp.approved_at)}
+                      </span>
+                      <Badge variant="outline">
+                        +{stamp.multiplier} puan
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

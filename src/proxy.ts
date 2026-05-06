@@ -1,9 +1,49 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/', '/login', '/register', '/card']
+const PUBLIC_PATHS = [
+  '/',
+  '/auth/callback',
+  '/card',
+  '/cerez',
+  '/forgot-password',
+  '/gizlilik',
+  '/kosullar',
+  '/kvkk',
+  '/opengraph-image',
+  '/robots.txt',
+  '/reset-password',
+  '/sitemap.xml',
+]
+const AUTH_PATHS = ['/login', '/register']
+const DASHBOARD_PATHS = [
+  '/analytics',
+  '/campaigns',
+  '/customers',
+  '/dashboard',
+  '/onboarding',
+  '/settings',
+]
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  const isApiRoute = pathname.startsWith('/api/')
+  const isPublic = PUBLIC_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  )
+  const isAuthPath = AUTH_PATHS.includes(pathname)
+  const isDashboard = DASHBOARD_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  )
+
+  if (isApiRoute || isPublic) {
+    return NextResponse.next()
+  }
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -28,24 +68,13 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const { pathname } = request.nextUrl
-
-  const isPublic = PUBLIC_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`)
-  )
-  const isApiRoute = pathname.startsWith('/api/')
-  const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/customers') || pathname.startsWith('/campaigns') || pathname.startsWith('/analytics') || pathname.startsWith('/settings') || pathname.startsWith('/onboarding')
 
   if (isDashboard && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if ((pathname === '/login' || pathname === '/register') && user) {
+  if (isAuthPath && user) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
-  if (isApiRoute || isPublic) {
-    return supabaseResponse
   }
 
   return supabaseResponse

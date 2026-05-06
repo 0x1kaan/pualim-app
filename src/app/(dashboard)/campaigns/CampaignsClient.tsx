@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Plus,
@@ -27,11 +27,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { formatDate, cn } from '@/lib/utils'
+import { useCafeStore } from '@/stores/cafeStore'
 import type { Cafe, Campaign } from '@/types/database'
 
 interface Props {
   cafe: Cafe
   initialCampaigns: Campaign[]
+  demoMode?: boolean
 }
 
 interface FormState {
@@ -52,14 +54,28 @@ const initialForm: FormState = {
   bonus_stamps: 0,
 }
 
-export function CampaignsClient({ cafe, initialCampaigns }: Props) {
+function getCurrentTimestamp() {
+  return Date.now()
+}
+
+export function CampaignsClient({
+  cafe,
+  initialCampaigns,
+  demoMode = false,
+}: Props) {
+  const setCafe = useCafeStore((s) => s.setCafe)
   const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns)
   const [openForm, setOpenForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(initialForm)
+  const [currentTime] = useState(getCurrentTimestamp)
 
   const isStarter = cafe.plan === 'starter'
+
+  useEffect(() => {
+    setCafe(cafe)
+  }, [cafe, setCafe])
 
   function resetForm() {
     setForm(initialForm)
@@ -83,6 +99,34 @@ export function CampaignsClient({ cafe, initialCampaigns }: Props) {
     }
 
     setSubmitting(true)
+
+    if (demoMode) {
+      const now = new Date().toISOString()
+      const campaign: Campaign = {
+        id: `demo-campaign-${Date.now()}`,
+        cafe_id: cafe.id,
+        name: form.name,
+        description: form.description || null,
+        starts_at: new Date(form.starts_at).toISOString(),
+        ends_at: new Date(form.ends_at).toISOString(),
+        active_days: [0, 1, 2, 3, 4, 5, 6],
+        active_hours_start: 8,
+        active_hours_end: 22,
+        stamp_multiplier: form.stamp_multiplier,
+        bonus_stamps: form.bonus_stamps,
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+      }
+
+      setCampaigns((prev) => [campaign, ...prev])
+      toast.success('Demo kampanya oluşturuldu')
+      setOpenForm(false)
+      resetForm()
+      setSubmitting(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/campaigns', {
         method: 'POST',
@@ -116,6 +160,16 @@ export function CampaignsClient({ cafe, initialCampaigns }: Props) {
   async function toggleActive(c: Campaign) {
     setTogglingId(c.id)
     const next = !c.is_active
+
+    if (demoMode) {
+      setCampaigns((prev) =>
+        prev.map((p) => (p.id === c.id ? { ...p, is_active: next } : p))
+      )
+      toast.success(next ? 'Demo kampanya aktif' : 'Demo kampanya pasif')
+      setTogglingId(null)
+      return
+    }
+
     try {
       const res = await fetch(`/api/campaigns/${c.id}`, {
         method: 'PATCH',
@@ -142,7 +196,10 @@ export function CampaignsClient({ cafe, initialCampaigns }: Props) {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-heading font-bold">Kampanyalar</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-heading font-bold">Kampanyalar</h1>
+            {demoMode && <Badge variant="outline">Demo veri</Badge>}
+          </div>
           <p className="text-muted-foreground text-sm">
             Çarpan ve bonus puan kampanyaları
           </p>
@@ -169,6 +226,7 @@ export function CampaignsClient({ cafe, initialCampaigns }: Props) {
               campaign={c}
               index={i}
               toggling={togglingId === c.id}
+              currentTime={currentTime}
               onToggle={() => toggleActive(c)}
             />
           ))}
@@ -313,7 +371,7 @@ function EmptyState() {
   return (
     <Card>
       <CardContent className="text-center py-16 px-4">
-        <div className="text-4xl mb-3">🎯</div>
+        <Megaphone className="h-9 w-9 mx-auto mb-3 text-muted-foreground/40" />
         <h3 className="font-heading font-semibold mb-1">Henüz kampanya yok</h3>
         <p className="text-sm text-muted-foreground max-w-sm mx-auto">
           Hafta sonu 2x puan, doğum gününde bonus gibi kampanyalar oluşturarak
@@ -328,16 +386,17 @@ function CampaignCard({
   campaign,
   index,
   toggling,
+  currentTime,
   onToggle,
 }: {
   campaign: Campaign
   index: number
   toggling: boolean
+  currentTime: number
   onToggle: () => void
 }) {
-  const now = Date.now()
-  const isFuture = new Date(campaign.starts_at).getTime() > now
-  const isPast = new Date(campaign.ends_at).getTime() < now
+  const isFuture = new Date(campaign.starts_at).getTime() > currentTime
+  const isPast = new Date(campaign.ends_at).getTime() < currentTime
   const status = isPast
     ? { label: 'Bitti', cls: 'text-muted-foreground bg-muted' }
     : isFuture

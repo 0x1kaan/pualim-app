@@ -1,11 +1,26 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import {
+  demoCafe,
+  demoCampaigns,
+  isSupabaseConfigured,
+} from '@/lib/demo'
 import { CampaignsClient } from './CampaignsClient'
 import type { Cafe } from '@/types/database'
 
 export const metadata = { title: 'Kampanyalar' }
 
 export default async function CampaignsPage() {
+  if (!isSupabaseConfigured()) {
+    return (
+      <CampaignsClient
+        cafe={demoCafe}
+        initialCampaigns={demoCampaigns}
+        demoMode
+      />
+    )
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')

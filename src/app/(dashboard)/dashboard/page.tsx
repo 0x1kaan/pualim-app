@@ -1,11 +1,28 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import {
+  demoCafe,
+  demoPendingStamps,
+  demoSummary,
+  isSupabaseConfigured,
+} from '@/lib/demo'
 import { DashboardClient } from './DashboardClient'
 import type { Cafe } from '@/types/database'
 
 export const metadata = { title: 'Panel' }
 
 export default async function DashboardPage() {
+  if (!isSupabaseConfigured()) {
+    return (
+      <DashboardClient
+        cafe={demoCafe}
+        initialSummary={demoSummary}
+        initialPending={demoPendingStamps}
+        demoMode
+      />
+    )
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')

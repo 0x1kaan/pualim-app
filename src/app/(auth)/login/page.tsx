@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Eye, EyeOff, Coffee, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Coffee, Loader2, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,9 +17,31 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const hasSupabaseConfig = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+
+    if (searchParams.get('password') === 'updated') {
+      toast.success('Şifreniz güncellendi. Yeni şifrenizle giriş yapabilirsiniz.')
+    }
+
+    if (searchParams.get('error') === 'auth_callback') {
+      toast.error('Oturum bağlantısı doğrulanamadı. Lütfen tekrar deneyin.')
+    }
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!hasSupabaseConfig) {
+      toast.info('Supabase ayarı yok; demo panel açılıyor')
+      router.push('/dashboard')
+      return
+    }
+
     if (!email || !password) {
       toast.error('E-posta ve şifre gerekli')
       return
@@ -116,6 +138,17 @@ export default function LoginPage() {
               'Giriş Yap'
             )}
           </Button>
+          {!hasSupabaseConfig && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => router.push('/dashboard')}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Demo paneli görüntüle
+            </Button>
+          )}
         </form>
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground">
